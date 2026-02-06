@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Integration tests
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          HEALTH_PATH: ${{ secrets.HEALTH_PATH }}
+          KEY_ENDPOINTS: ${{ secrets.KEY_ENDPOINTS }}
+          API_AUTH_HEADER: ${{ secrets.API_AUTH_HEADER }}
+          API_AUTH_VALUE: ${{ secrets.API_AUTH_VALUE }}
+        run: npm run test:integration
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          PRIMARY_UI_ROUTE: ${{ secrets.PRIMARY_UI_ROUTE }}
+          E2E_START_CMD: ${{ secrets.E2E_START_CMD }}
+        run: npm run test:e2e
